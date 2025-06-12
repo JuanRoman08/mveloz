@@ -1,92 +1,61 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Search, Edit2, Trash2, Eye, Users, Save, X, Phone, MapPin, User, Calendar } from 'lucide-react';
 
 interface Cliente {
   id: number;
-  razonSocial: string;
-  direccion: string;
+  razon_social: string;
+  ruc_dni: string;
+  nombre_contacto: string;
+  email: string;
   celular: string;
-  nombreContacto: string;
-  fechaRegistro: string;
+  telefono_fijo: string;
+  direccion: string;
+  ciudad: string;
+  codigo_postal: string;
+  fecha_registro: string;
 }
 
 interface ClienteForm {
-  razonSocial: string;
-  direccion: string;
-  celular: string;
-  nombreContacto: string;
-  ruc: string;
+  razon_social: string;
+  ruc_dni: string;
+  nombre_contacto: string;
   email: string;
-  telefono: string;
+  celular: string;
+  telefono_fijo: string;
+  direccion: string;
   ciudad: string;
-  codigoPostal: string;
+  codigo_postal: string;
 }
 
 const Clientes: React.FC = () => {
   const [activeView, setActiveView] = useState<'lista' | 'nuevo'>('lista');
   const [searchTerm, setSearchTerm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
   const [formData, setFormData] = useState<ClienteForm>({
-    razonSocial: '',
-    direccion: '',
-    celular: '',
-    nombreContacto: '',
-    ruc: '',
+    razon_social: '',
+    ruc_dni: '',
+    nombre_contacto: '',
     email: '',
-    telefono: '',
+    celular: '',
+    telefono_fijo: '',
+    direccion: '',
     ciudad: '',
-    codigoPostal: ''
+    codigo_postal: ''
   });
 
-  // Datos de ejemplo - En producción vendrían de una API
-  const clientes: Cliente[] = [
-    {
-      id: 1,
-      razonSocial: 'Empresa Ejemplo',
-      direccion: 'Calle 123',
-      celular: '123456789',
-      nombreContacto: 'Juan Pérez',
-      fechaRegistro: '2025-05-26'
-    },
-    {
-      id: 2,
-      razonSocial: 'Tecnología Avanzada S.A.',
-      direccion: 'Av. Principal 456',
-      celular: '987654321',
-      nombreContacto: 'María García',
-      fechaRegistro: '2025-05-25'
-    },
-    {
-      id: 3,
-      razonSocial: 'Servicios Integrales LTDA',
-      direccion: 'Jr. Comercio 789',
-      celular: '456789123',
-      nombreContacto: 'Carlos López',
-      fechaRegistro: '2025-05-24'
-    },
-    {
-      id: 4,
-      razonSocial: 'Construcción y Desarrollo SAC',
-      direccion: 'Av. Industrial 321',
-      celular: '321654987',
-      nombreContacto: 'Ana Torres',
-      fechaRegistro: '2025-05-23'
-    },
-    {
-      id: 5,
-      razonSocial: 'Comercial del Norte EIRL',
-      direccion: 'Jr. Los Andes 654',
-      celular: '654321789',
-      nombreContacto: 'Pedro Mendoza',
-      fechaRegistro: '2025-05-22'
-    }
-  ];
+  // Obtener clientes de la API al cargar el componente
+  useEffect(() => {
+    fetch('http://localhost:8000/api/clientes/')
+      .then(res => res.json())
+      .then(data => setClientes(data))
+      .catch(() => setClientes([]));
+  }, []);
 
   // Filtrar clientes basado en el término de búsqueda
   const filteredClientes = clientes.filter(cliente =>
-    cliente.razonSocial.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cliente.nombreContacto.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    cliente.razon_social.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    cliente.nombre_contacto.toLowerCase().includes(searchTerm.toLowerCase()) ||
     cliente.celular.includes(searchTerm)
   );
 
@@ -103,22 +72,34 @@ const Clientes: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
+
     try {
-      console.log('Nuevo cliente:', formData);
-      // Aquí iría la lógica para enviar a la API
-      
-      // Simular delay de API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mostrar mensaje de éxito
-      alert('Cliente creado exitosamente');
-      
-      // Limpiar formulario y volver a la lista
-      handleReset();
-      setActiveView('lista');
+      const response = await fetch('http://localhost:8000/api/clientes/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      if (response.ok) {
+        alert('Cliente creado exitosamente');
+        setFormData({
+          razon_social: '',
+          ruc_dni: '',
+          nombre_contacto: '',
+          email: '',
+          celular: '',
+          telefono_fijo: '',
+          direccion: '',
+          ciudad: '',
+          codigo_postal: ''
+        });
+        setActiveView('lista');
+        // Recargar la lista de clientes
+        const nuevosClientes = await fetch('http://localhost:8000/api/clientes/').then(res => res.json());
+        setClientes(nuevosClientes);
+      } else {
+        alert('Error al crear el cliente. Intenta nuevamente.');
+      }
     } catch (error) {
-      console.error('Error al crear cliente:', error);
       alert('Error al crear el cliente. Intenta nuevamente.');
     } finally {
       setIsSubmitting(false);
@@ -128,39 +109,37 @@ const Clientes: React.FC = () => {
   // Limpiar formulario
   const handleReset = () => {
     setFormData({
-      razonSocial: '',
-      direccion: '',
-      celular: '',
-      nombreContacto: '',
-      ruc: '',
+      razon_social: '',
+      ruc_dni: '',
+      nombre_contacto: '',
       email: '',
-      telefono: '',
+      celular: '',
+      telefono_fijo: '',
+      direccion: '',
       ciudad: '',
-      codigoPostal: ''
+      codigo_postal: ''
     });
   };
 
   // Validar si el formulario está completo (solo campos obligatorios)
   const isFormValid = () => {
-    const requiredFields = ['razonSocial', 'nombreContacto', 'celular', 'direccion'];
+    const requiredFields = ['razon_social', 'nombre_contacto', 'celular', 'direccion'];
     return requiredFields.every(field => formData[field as keyof ClienteForm].trim() !== '');
   };
 
   // Handlers para las acciones de la tabla
   const handleEdit = (id: number) => {
-    console.log('Edit client:', id);
     // Aquí iría la lógica para editar cliente
   };
 
-  const handleDelete = (id: number) => {
-    console.log('Delete client:', id);
+  const handleDelete = async (id: number) => {
     if (window.confirm('¿Estás seguro de que deseas eliminar este cliente?')) {
-      // Lógica de eliminación
+      await fetch(`http://localhost:8000/api/clientes/${id}/`, { method: 'DELETE' });
+      setClientes(clientes.filter(c => c.id !== id));
     }
   };
 
   const handleView = (id: number) => {
-    console.log('View client:', id);
     // Aquí iría la lógica para ver detalles del cliente
   };
 
@@ -175,7 +154,6 @@ const Clientes: React.FC = () => {
             </h1>
             <div className="w-16 h-1 bg-red-600 mt-1"></div>
           </div>
-          
           <button
             onClick={() => setActiveView(activeView === 'lista' ? 'nuevo' : 'lista')}
             className="flex items-center px-6 py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-colors duration-200 uppercase tracking-wide shadow-lg"
@@ -231,11 +209,11 @@ const Clientes: React.FC = () => {
                       filteredClientes.map((cliente, index) => (
                         <tr key={cliente.id} className={`hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-black">{cliente.id}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-black">{cliente.razonSocial}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-black">{cliente.razon_social}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{cliente.direccion}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{cliente.celular}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-black">{cliente.nombreContacto}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{cliente.fechaRegistro}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-black">{cliente.nombre_contacto}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{cliente.fecha_registro}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-center">
                             <div className="flex justify-center space-x-2">
                               <button
@@ -299,8 +277,8 @@ const Clientes: React.FC = () => {
                       </label>
                       <input
                         type="text"
-                        name="razonSocial"
-                        value={formData.razonSocial}
+                        name="razon_social"
+                        value={formData.razon_social}
                         onChange={handleInputChange}
                         required
                         className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all duration-200 font-medium"
@@ -313,8 +291,8 @@ const Clientes: React.FC = () => {
                       </label>
                       <input
                         type="text"
-                        name="ruc"
-                        value={formData.ruc}
+                        name="ruc_dni"
+                        value={formData.ruc_dni}
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all duration-200 font-medium"
                         placeholder="Ingrese RUC o DNI"
@@ -339,8 +317,8 @@ const Clientes: React.FC = () => {
                       </label>
                       <input
                         type="text"
-                        name="nombreContacto"
-                        value={formData.nombreContacto}
+                        name="nombre_contacto"
+                        value={formData.nombre_contacto}
                         onChange={handleInputChange}
                         required
                         className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all duration-200 font-medium"
@@ -380,8 +358,8 @@ const Clientes: React.FC = () => {
                       </label>
                       <input
                         type="tel"
-                        name="telefono"
-                        value={formData.telefono}
+                        name="telefono_fijo"
+                        value={formData.telefono_fijo}
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all duration-200 font-medium"
                         placeholder="Teléfono fijo (opcional)"
@@ -433,8 +411,8 @@ const Clientes: React.FC = () => {
                       </label>
                       <input
                         type="text"
-                        name="codigoPostal"
-                        value={formData.codigoPostal}
+                        name="codigo_postal"
+                        value={formData.codigo_postal}
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all duration-200 font-medium"
                         placeholder="Código postal"
@@ -510,7 +488,7 @@ const Clientes: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Nuevos Este Mes</p>
-                <p className="text-3xl font-bold text-black">{clientes.filter(c => c.fechaRegistro.startsWith('2025-05')).length}</p>
+                <p className="text-3xl font-bold text-black">{clientes.filter(c => c.fecha_registro.startsWith('2025-05')).length}</p>
               </div>
               <div className="bg-gray-100 p-3 rounded-full">
                 <Calendar className="text-black" size={24} />

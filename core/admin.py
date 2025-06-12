@@ -3,12 +3,21 @@ from .models import Cliente, OrdenServicio
 
 @admin.register(Cliente)
 class ClienteAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'dni', 'direccion', 'telefono')
-    search_fields = ('nombre', 'dni')
-    list_filter = ('direccion',)
+    list_display = ('razon_social', 'ruc_dni', 'nombre_contacto', 'direccion', 'celular', 'telefono_fijo')
+    search_fields = ('razon_social', 'ruc_dni', 'nombre_contacto', 'celular')
+    list_filter = ('ciudad', 'direccion')
 
 @admin.register(OrdenServicio)
 class OrdenServicioAdmin(admin.ModelAdmin):
-    list_display = ('cliente', 'descripcion', 'fecha_ingreso', 'estado')
-    search_fields = ('cliente__nombre', 'descripcion')
-    list_filter = ('estado',)
+    list_display = (
+        'id',
+        'remitente',
+        'destinatario',
+        'lugar_origen',
+        'lugar_destino',
+        'estado',
+        'fecha_ingreso',
+        'importe_total'
+    )
+    search_fields = ('remitente__razon_social', 'destinatario__razon_social', 'lugar_origen', 'lugar_destino')
+    list_filter = ('estado', 'forma_pago')

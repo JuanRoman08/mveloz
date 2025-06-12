@@ -4,56 +4,7 @@ import { useNavigate } from 'react-router-dom';
 interface LoginForm {
   usuario: string;
   contrasena: string;
-};
-
-// Tipos de usuario y permisos
-interface AuthUser {
-  id: number;
-  name: string;
-  role: 'ADMIN' | 'WORKER';
-  password: string,
-  permissions: string[];
 }
-
-interface Personal {
-  name: string;
-  lastname: string;
-  rol: string;
-  email: string;
-  user: AuthUser;
-};
-
-const personales : Personal[] = [
-  {
-    name: "Karen",
-    lastname: "Esteves",
-    user : {
-      id: 2,
-      name: "Karen",
-      role: 'WORKER',
-      password: "Karen1234",
-      permissions: ['orders.view_assigned', 'orders.update_status', 'config.edit_profile']
-    },
-    rol: "Trabajador",
-    email: "kesteves@gmail.com"
-  },
-  {
-    name: "Yovani",
-    lastname: "Esteves",
-    user: {
-      id: 1,
-      name: 'Yovani',
-      role: 'ADMIN',
-      password: "76522553Yovani",
-      permissions: [
-        'orders.create', 'orders.edit', 'orders.delete', 'orders.view_all', 
-        'orders.view_amounts', 'orders.assign_worker', 'config.edit_all', 'config.manage_users', 'config.system'
-      ]
-    },
-    rol: "Administrador",
-    email: "yesteves@gmail.com"
-  }
-];
 
 const Login: React.FC = () => {
   const [formData, setFormData] = useState<LoginForm>({
@@ -73,30 +24,29 @@ const Login: React.FC = () => {
 
   const handleSubmit = async () => {
     setIsLoading(true);
-    
-    // Aquí se conectará con la API de Django
-    console.log('Login attempt:', formData);
-    
-    // Simular delay de API
 
-    setTimeout(() => {
-      const personalLogin = personales.find(
-        personal =>
-          personal.user.name === formData.usuario &&
-          personal.user.password === formData.contrasena
-      );
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/login/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+      });
 
-      if (!personalLogin) {
-        alert('Usuario o contraseña incorrectos');
-        setIsLoading(false);
-        return;
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        localStorage.setItem('mveloz_user', JSON.stringify(data.user));
+        navigate('/dashboard');
+      } else {
+        alert(data.error || 'Usuario o contraseña incorrectos');
       }
-
+    } catch (error) {
+      alert('Error de conexión con el servidor');
+    } finally {
       setIsLoading(false);
-      // Redirigir al dashboard después de login exitoso
-      localStorage.setItem('mveloz_user', JSON.stringify(personalLogin));
-      navigate('/dashboard');
-    }, 1000);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -123,7 +73,6 @@ const Login: React.FC = () => {
             <div className="space-y-6">
               <div>
                 <label htmlFor="usuario" className="block text-sm font-semibold text-black mb-3 uppercase tracking-wide">
-
                   Usuario
                 </label>
                 <input
@@ -135,14 +84,13 @@ const Login: React.FC = () => {
                   onChange={handleInputChange}
                   onKeyUp={handleKeyPress}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg shadow-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all duration-200 font-medium"
-
                   placeholder="Ingresa tu usuario"
                 />
               </div>
 
               <div>
                 <label htmlFor="contrasena" className="block text-sm font-semibold text-black mb-3 uppercase tracking-wide">
-                  contrasena
+                  Contraseña
                 </label>
                 <input
                   id="contrasena"
@@ -153,7 +101,7 @@ const Login: React.FC = () => {
                   onChange={handleInputChange}
                   onKeyUp={handleKeyPress}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg shadow-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all duration-200 font-medium"
-                  placeholder="Ingresa tu contrasena"
+                  placeholder="Ingresa tu contraseña"
                 />
               </div>
 
@@ -183,7 +131,7 @@ const Login: React.FC = () => {
 
         <div className="text-center">
           <p className="text-gray-400 text-sm">
-            ¿Olvidaste tu contrasena? 
+            ¿Olvidaste tu contraseña? 
             <span className="text-red-500 hover:text-red-400 cursor-pointer font-medium ml-1">
               Recuperar acceso
             </span>
@@ -191,7 +139,7 @@ const Login: React.FC = () => {
         </div>
       </div>
     </div>
-  )
+  );
 };
 
 export default Login;
