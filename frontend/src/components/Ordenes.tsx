@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Save, MapPin, User, FileText, X, Search, Edit2, Trash2, Eye, Calendar, Package, CheckCircle, Clock, AlertCircle, CreditCard, DollarSign } from 'lucide-react';
 
 // Tipos de usuario y permisos
@@ -9,36 +9,36 @@ interface AuthUser {
   permissions: string[];
 }
 
-// Modelo actualizado de Orden
+// Modelo actualizado de Orden (ajusta los nombres según tu backend)
 interface Orden {
   id: number;
-  fechaCreacion: string;
-  remitenteRazon: string;
-  destinatarioRazon: string;
-  lugarOrigen: string;
-  lugarDestino: string;
+  fecha_creacion: string;
+  remitente_razon: string;
+  destinatario_razon: string;
+  lugar_origen: string;
+  lugar_destino: string;
   estado: 'Pendiente' | 'En Tránsito' | 'Completada' | 'Cancelada';
-  detalleCarga: string;
-  formaPago: string;
-  estadoPago: string;
-  importeTotal: number;
-  trabajadorAsignado?: string;
-  trabajadorId?: number;
+  detalle_carga: string;
+  forma_pago: string;
+  estado_pago: string;
+  importe_total: number;
+  trabajador_asignado?: string;
+  trabajador_id?: number;
   notas?: string;
 }
 
 interface OrdenForm {
-  remitenteRuc: string;
-  remitenteRazon: string;
-  remitenteCelular: string;
-  destinatarioRuc: string;
-  destinatarioRazon: string;
-  destinatarioCelular: string;
-  lugarOrigen: string;
-  lugarDestino: string;
-  detalleCarga: string;
-  formaPago: string;
-  importeTotal: number;
+  remitente_ruc: string;
+  remitente_razon: string;
+  remitente_celular: string;
+  destinatario_ruc: string;
+  destinatario_razon: string;
+  destinatario_celular: string;
+  lugar_origen: string;
+  lugar_destino: string;
+  detalle_carga: string;
+  forma_pago: string;
+  importe_total: number;
 }
 
 // Gestión de usuario con localStorage
@@ -46,21 +46,17 @@ const getUserFromStorage = (): AuthUser => {
   const stored = localStorage.getItem('mveloz_user');
   if (stored) {
     const parsed = JSON.parse(stored);
-    // Si el objeto guardado tiene una propiedad 'user', retorna esa, si no, retorna el objeto completo
     return parsed.user ? parsed.user : parsed;
   }
-  
-  // Usuario por defecto (Admin)
   const defaultUser: AuthUser = {
     id: 1,
     name: 'Administrador',
     role: 'ADMIN',
     permissions: [
-      'orders.create', 'orders.edit', 'orders.delete', 'orders.view_all', 
+      'orders.create', 'orders.edit', 'orders.delete', 'orders.view_all',
       'orders.view_amounts', 'orders.assign_worker', 'orders.generate_invoice'
     ]
   };
-  
   localStorage.setItem('mveloz_user', JSON.stringify(defaultUser));
   return defaultUser;
 };
@@ -71,83 +67,41 @@ const Ordenes: React.FC = () => {
 
   const [activeView, setActiveView] = useState<'lista' | 'nueva'>('lista');
   const [searchTerm, setSearchTerm] = useState('');
+  const [ordenes, setOrdenes] = useState<Orden[]>([]);
   const [formData, setFormData] = useState<OrdenForm>({
-    remitenteRuc: '',
-    remitenteRazon: '',
-    remitenteCelular: '',
-    destinatarioRuc: '',
-    destinatarioRazon: '',
-    destinatarioCelular: '',
-    lugarOrigen: '',
-    lugarDestino: '',
-    detalleCarga: '',
-    formaPago: 'Efectivo',
-    importeTotal: 0
+    remitente_ruc: '',
+    remitente_razon: '',
+    remitente_celular: '',
+    destinatario_ruc: '',
+    destinatario_razon: '',
+    destinatario_celular: '',
+    lugar_origen: '',
+    lugar_destino: '',
+    detalle_carga: '',
+    forma_pago: 'Efectivo',
+    importe_total: 0
   });
-
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Datos de ejemplo actualizados
-  const todasLasOrdenes: Orden[] = [
-    {
-      id: 1001,
-      fechaCreacion: '2025-06-02',
-      remitenteRazon: 'Empresa Ejemplo',
-      destinatarioRazon: 'Tecnología Avanzada S.A.',
-      lugarOrigen: 'Lima',
-      lugarDestino: 'Arequipa',
-      estado: 'En Tránsito',
-      detalleCarga: 'Equipos de computación',
-      formaPago: 'Transferencia',
-      estadoPago: 'Pagado',
-      importeTotal: 1250.00,
-      trabajadorAsignado: 'Carlos Mendoza',
-      trabajadorId: 2,
-      notas: 'Entrega antes de las 3 PM'
-    },
-    {
-      id: 1002,
-      fechaCreacion: '2025-06-01',
-      remitenteRazon: 'Servicios Integrales LTDA',
-      destinatarioRazon: 'Construcción del Norte',
-      lugarOrigen: 'Trujillo',
-      lugarDestino: 'Chiclayo',
-      estado: 'Completada',
-      detalleCarga: 'Materiales de construcción',
-      formaPago: 'Efectivo',
-      estadoPago: 'Pendiente',
-      importeTotal: 890.50,
-      trabajadorAsignado: 'Ana García',
-      trabajadorId: 3
-    },
-    {
-      id: 1003,
-      fechaCreacion: '2025-06-01',
-      remitenteRazon: 'Comercial del Sur',
-      destinatarioRazon: 'Distribuidora Central',
-      lugarOrigen: 'Cusco',
-      lugarDestino: 'Lima',
-      estado: 'Pendiente',
-      detalleCarga: 'Productos textiles',
-      formaPago: 'Cheque',
-      estadoPago: 'Pendiente',
-      importeTotal: 2100.00,
-      trabajadorAsignado: 'Carlos Mendoza',
-      trabajadorId: 2
-    }
-  ];
+  // Obtener órdenes de la API al cargar el componente
+  useEffect(() => {
+    fetch('http://localhost:8000/api/ordenes/')
+      .then(res => res.json())
+      .then(data => setOrdenes(data))
+      .catch(() => setOrdenes([]));
+  }, []);
 
   // Filtrar órdenes según el rol
-  const ordenes = user.role === 'ADMIN' 
-    ? todasLasOrdenes 
-    : todasLasOrdenes.filter(orden => orden.trabajadorId === user.id);
+  const ordenesFiltradasPorRol = user.role === 'ADMIN'
+    ? ordenes
+    : ordenes.filter(orden => orden.trabajador_id === user.id);
 
   // Filtrar órdenes por búsqueda
-  const filteredOrdenes = ordenes.filter(orden =>
-    orden.remitenteRazon.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    orden.destinatarioRazon.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    orden.lugarOrigen.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    orden.lugarDestino.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  const filteredOrdenes = ordenesFiltradasPorRol.filter(orden =>
+    orden.remitente_razon.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    orden.destinatario_razon.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    orden.lugar_origen.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    orden.lugar_destino.toLowerCase().includes(searchTerm.toLowerCase()) ||
     orden.estado.toLowerCase().includes(searchTerm.toLowerCase()) ||
     orden.id.toString().includes(searchTerm)
   );
@@ -156,7 +110,7 @@ const Ordenes: React.FC = () => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'importeTotal' ? parseFloat(value) || 0 : value
+      [name]: name === 'importe_total' ? parseFloat(value) || 0 : value
     }));
   };
 
@@ -166,14 +120,23 @@ const Ordenes: React.FC = () => {
       alert('No tienes permisos para crear órdenes');
       return;
     }
-
     setIsSubmitting(true);
     try {
-      console.log('Nueva orden:', formData);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      alert('Orden creada exitosamente');
-      handleReset();
-      setActiveView('lista');
+      const response = await fetch('http://localhost:8000/api/ordenes/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      if (response.ok) {
+        alert('Orden creada exitosamente');
+        handleReset();
+        setActiveView('lista');
+        // Recargar la lista de órdenes
+        const nuevasOrdenes = await fetch('http://localhost:8000/api/ordenes/').then(res => res.json());
+        setOrdenes(nuevasOrdenes);
+      } else {
+        alert('Error al crear la orden');
+      }
     } catch (error) {
       alert('Error al crear la orden');
     } finally {
@@ -183,52 +146,27 @@ const Ordenes: React.FC = () => {
 
   const handleReset = () => {
     setFormData({
-      remitenteRuc: '',
-      remitenteRazon: '',
-      remitenteCelular: '',
-      destinatarioRuc: '',
-      destinatarioRazon: '',
-      destinatarioCelular: '',
-      lugarOrigen: '',
-      lugarDestino: '',
-      detalleCarga: '',
-      formaPago: 'Efectivo',
-      importeTotal: 0
+      remitente_ruc: '',
+      remitente_razon: '',
+      remitente_celular: '',
+      destinatario_ruc: '',
+      destinatario_razon: '',
+      destinatario_celular: '',
+      lugar_origen: '',
+      lugar_destino: '',
+      detalle_carga: '',
+      forma_pago: 'Efectivo',
+      importe_total: 0
     });
   };
 
   const isFormValid = () => {
-    const requiredFields = ['remitenteRazon', 'destinatarioRazon', 'lugarOrigen', 'lugarDestino', 'detalleCarga'];
-    return requiredFields.every(field => formData[field as keyof OrdenForm].toString().trim() !== '') 
-           && formData.importeTotal > 0;
+    const requiredFields = ['remitente_razon', 'destinatario_razon', 'lugar_origen', 'lugar_destino', 'detalle_carga'];
+    return requiredFields.every(field => formData[field as keyof OrdenForm].toString().trim() !== '')
+      && formData.importe_total > 0;
   };
 
-  const handleEdit = (id: number) => {
-    if (!hasPermission('orders.edit')) {
-      alert('No tienes permisos para editar órdenes');
-      return;
-    }
-    console.log('Edit orden:', id);
-  };
-
-  const handleDelete = (id: number) => {
-    if (!hasPermission('orders.delete')) {
-      alert('No tienes permisos para eliminar órdenes');
-      return;
-    }
-    if (window.confirm('¿Eliminar esta orden?')) {
-      console.log('Delete orden:', id);
-    }
-  };
-
-  const handleUpdateStatus = (id: number, newStatus: string) => {
-    if (!hasPermission('orders.update_status')) {
-      alert('No tienes permisos para actualizar el estado');
-      return;
-    }
-    console.log(`Actualizando orden ${id} a: ${newStatus}`);
-  };
-
+  // Helpers para colores
   const getEstadoColor = (estado: string) => {
     switch (estado) {
       case 'Pendiente': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
@@ -250,16 +188,44 @@ const Ordenes: React.FC = () => {
 
   // Estadísticas
   const estadisticas = {
-    total: ordenes.length,
-    pendientes: ordenes.filter(o => o.estado === 'Pendiente').length,
-    enTransito: ordenes.filter(o => o.estado === 'En Tránsito').length,
-    completadas: ordenes.filter(o => o.estado === 'Completada').length,
-    ingresos: hasPermission('orders.view_amounts') 
-      ? ordenes.reduce((sum, orden) => sum + orden.importeTotal, 0)
+    total: ordenesFiltradasPorRol.length,
+    pendientes: ordenesFiltradasPorRol.filter(o => o.estado === 'Pendiente').length,
+    enTransito: ordenesFiltradasPorRol.filter(o => o.estado === 'En Tránsito').length,
+    completadas: ordenesFiltradasPorRol.filter(o => o.estado === 'Completada').length,
+    ingresos: hasPermission('orders.view_amounts')
+      ? ordenesFiltradasPorRol.reduce((sum, orden) => sum + orden.importe_total, 0)
       : 0,
     pendientesPago: hasPermission('orders.view_amounts')
-      ? ordenes.filter(o => o.estadoPago === 'Pendiente').length
+      ? ordenesFiltradasPorRol.filter(o => o.estado_pago === 'Pendiente').length
       : 0
+  };
+
+  // Handlers para acciones (puedes implementar según tu lógica)
+  const handleEdit = (id: number) => {
+    if (!hasPermission('orders.edit')) {
+      alert('No tienes permisos para editar órdenes');
+      return;
+    }
+    // Lógica de edición aquí
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!hasPermission('orders.delete')) {
+      alert('No tienes permisos para eliminar órdenes');
+      return;
+    }
+    if (window.confirm('¿Eliminar esta orden?')) {
+      await fetch(`http://localhost:8000/api/ordenes/${id}/`, { method: 'DELETE' });
+      setOrdenes(ordenes.filter(o => o.id !== id));
+    }
+  };
+
+  const handleUpdateStatus = (id: number, newStatus: string) => {
+    if (!hasPermission('orders.update_status')) {
+      alert('No tienes permisos para actualizar el estado');
+      return;
+    }
+    // Lógica para actualizar estado aquí
   };
 
   return (
@@ -280,7 +246,6 @@ const Ordenes: React.FC = () => {
               </p>
             </div>
           </div>
-          
           <div className="flex space-x-3">
             {hasPermission('orders.create') && (
               <button
@@ -349,13 +314,13 @@ const Ordenes: React.FC = () => {
                     {filteredOrdenes.map((orden, index) => (
                       <tr key={orden.id} className={`hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-black">#{orden.id}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{orden.fechaCreacion}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-black">{orden.remitenteRazon}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-black">{orden.destinatarioRazon}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{orden.fecha_creacion}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-black">{orden.remitente_razon}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-black">{orden.destinatario_razon}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                           <div className="flex items-center">
                             <MapPin size={14} className="text-red-600 mr-1" />
-                            {orden.lugarOrigen} → {orden.lugarDestino}
+                            {orden.lugar_origen} → {orden.lugar_destino}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -366,12 +331,12 @@ const Ordenes: React.FC = () => {
                         {hasPermission('orders.view_amounts') && (
                           <>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">
-                              S/. {orden.importeTotal.toFixed(2)}
+                              S/. {orden.importe_total.toFixed(2)}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{orden.formaPago}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{orden.forma_pago}</td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${getEstadoPagoColor(orden.estadoPago)}`}>
-                                {orden.estadoPago}
+                              <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${getEstadoPagoColor(orden.estado_pago)}`}>
+                                {orden.estado_pago}
                               </span>
                             </td>
                           </>
@@ -390,7 +355,6 @@ const Ordenes: React.FC = () => {
                             >
                               <Eye size={16} />
                             </button>
-                            
                             {user.role === 'WORKER' && orden.estado !== 'Completada' && (
                               <button
                                 onClick={() => handleUpdateStatus(orden.id, 'Completada')}
@@ -400,7 +364,6 @@ const Ordenes: React.FC = () => {
                                 <CheckCircle size={16} />
                               </button>
                             )}
-                            
                             {hasPermission('orders.edit') && (
                               <button
                                 onClick={() => handleEdit(orden.id)}
@@ -410,7 +373,6 @@ const Ordenes: React.FC = () => {
                                 <Edit2 size={16} />
                               </button>
                             )}
-                            
                             {hasPermission('orders.delete') && (
                               <button
                                 onClick={() => handleDelete(orden.id)}
@@ -447,8 +409,8 @@ const Ordenes: React.FC = () => {
                       <label className="block text-sm font-semibold text-black mb-3 uppercase tracking-wide">RUC / DNI *</label>
                       <input
                         type="text"
-                        name="remitenteRuc"
-                        value={formData.remitenteRuc}
+                        name="remitente_ruc"
+                        value={formData.remitente_ruc}
                         onChange={handleInputChange}
                         required
                         className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all duration-200 font-medium"
@@ -459,8 +421,8 @@ const Ordenes: React.FC = () => {
                       <label className="block text-sm font-semibold text-black mb-3 uppercase tracking-wide">Razón Social *</label>
                       <input
                         type="text"
-                        name="remitenteRazon"
-                        value={formData.remitenteRazon}
+                        name="remitente_razon"
+                        value={formData.remitente_razon}
                         onChange={handleInputChange}
                         required
                         className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all duration-200 font-medium"
@@ -471,8 +433,8 @@ const Ordenes: React.FC = () => {
                       <label className="block text-sm font-semibold text-black mb-3 uppercase tracking-wide">Celular *</label>
                       <input
                         type="tel"
-                        name="remitenteCelular"
-                        value={formData.remitenteCelular}
+                        name="remitente_celular"
+                        value={formData.remitente_celular}
                         onChange={handleInputChange}
                         required
                         className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all duration-200 font-medium"
@@ -493,8 +455,8 @@ const Ordenes: React.FC = () => {
                       <label className="block text-sm font-semibold text-black mb-3 uppercase tracking-wide">RUC / DNI *</label>
                       <input
                         type="text"
-                        name="destinatarioRuc"
-                        value={formData.destinatarioRuc}
+                        name="destinatario_ruc"
+                        value={formData.destinatario_ruc}
                         onChange={handleInputChange}
                         required
                         className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all duration-200 font-medium"
@@ -505,8 +467,8 @@ const Ordenes: React.FC = () => {
                       <label className="block text-sm font-semibold text-black mb-3 uppercase tracking-wide">Razón Social *</label>
                       <input
                         type="text"
-                        name="destinatarioRazon"
-                        value={formData.destinatarioRazon}
+                        name="destinatario_razon"
+                        value={formData.destinatario_razon}
                         onChange={handleInputChange}
                         required
                         className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all duration-200 font-medium"
@@ -517,8 +479,8 @@ const Ordenes: React.FC = () => {
                       <label className="block text-sm font-semibold text-black mb-3 uppercase tracking-wide">Celular *</label>
                       <input
                         type="tel"
-                        name="destinatarioCelular"
-                        value={formData.destinatarioCelular}
+                        name="destinatario_celular"
+                        value={formData.destinatario_celular}
                         onChange={handleInputChange}
                         required
                         className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all duration-200 font-medium"
@@ -539,8 +501,8 @@ const Ordenes: React.FC = () => {
                       <label className="block text-sm font-semibold text-black mb-3 uppercase tracking-wide">Lugar Origen *</label>
                       <input
                         type="text"
-                        name="lugarOrigen"
-                        value={formData.lugarOrigen}
+                        name="lugar_origen"
+                        value={formData.lugar_origen}
                         onChange={handleInputChange}
                         required
                         className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all duration-200 font-medium"
@@ -551,8 +513,8 @@ const Ordenes: React.FC = () => {
                       <label className="block text-sm font-semibold text-black mb-3 uppercase tracking-wide">Lugar Destino *</label>
                       <input
                         type="text"
-                        name="lugarDestino"
-                        value={formData.lugarDestino}
+                        name="lugar_destino"
+                        value={formData.lugar_destino}
                         onChange={handleInputChange}
                         required
                         className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all duration-200 font-medium"
@@ -563,8 +525,8 @@ const Ordenes: React.FC = () => {
                   <div className="mb-6">
                     <label className="block text-sm font-semibold text-black mb-3 uppercase tracking-wide">Detalle de Carga *</label>
                     <textarea
-                      name="detalleCarga"
-                      value={formData.detalleCarga}
+                      name="detalle_carga"
+                      value={formData.detalle_carga}
                       onChange={handleInputChange}
                       required
                       rows={3}
@@ -584,8 +546,8 @@ const Ordenes: React.FC = () => {
                     <div>
                       <label className="block text-sm font-semibold text-black mb-3 uppercase tracking-wide">Forma de Pago *</label>
                       <select
-                        name="formaPago"
-                        value={formData.formaPago}
+                        name="forma_pago"
+                        value={formData.forma_pago}
                         onChange={handleInputChange}
                         required
                         className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all duration-200 font-medium"
@@ -603,8 +565,8 @@ const Ordenes: React.FC = () => {
                         <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-semibold">S/.</span>
                         <input
                           type="number"
-                          name="importeTotal"
-                          value={formData.importeTotal}
+                          name="importe_total"
+                          value={formData.importe_total}
                           onChange={handleInputChange}
                           required
                           min="0"
@@ -763,7 +725,7 @@ const Ordenes: React.FC = () => {
                 <div>
                   <p className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Asignadas Hoy</p>
                   <p className="text-3xl font-bold text-black">
-                    {ordenes.filter(o => o.fechaCreacion === '2025-06-02').length}
+                    {ordenesFiltradasPorRol.filter(o => o.fecha_creacion === (new Date()).toISOString().slice(0, 10)).length}
                   </p>
                 </div>
                 <div className="bg-gray-100 p-3 rounded-full">
