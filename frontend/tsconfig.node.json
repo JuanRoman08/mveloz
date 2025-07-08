@@ -16,13 +16,10 @@
     /* Linting */
     "strict": true,
     "noUnusedLocals": true,
-    "noUnusedParameters": false,
+    "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true,
-
-    /* Types de Node.js */
-    "types": ["node"]
+    "noUncheckedSideEffectImports": true
   },
   "include": ["vite.config.ts"]
 }
