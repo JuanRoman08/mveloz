@@ -1,0 +1,4 @@
+gunicorn
+mysqlclient
+python-decouple
+django
